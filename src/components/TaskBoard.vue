@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import TaskCard from './TaskCard.vue'
 import AppIcon from './AppIcon.vue'
 import { statuses } from '../lib/tasks.js'
-const props = defineProps({ tasks: { type: Array, required: true } })
+const props = defineProps({ tasks: { type: Array, required: true }, filtered: Boolean })
 const emit = defineEmits(['edit', 'delete', 'status', 'create'])
 const dragging = ref(null)
 const over = ref(null)
@@ -24,7 +24,7 @@ function drop(event, status) {
     <section v-for="status in statuses" :key="status.value" class="board-column" :class="{ 'drop-active': over === status.value }" :aria-label="`${status.label}列`" @dragover.prevent="over = status.value" @drop.prevent="drop($event, status.value)">
       <header class="column-heading"><h2><i class="dot" :class="status.value"></i>{{ status.label }}<span class="count">{{ tasks.filter(t => t.status === status.value).length }}</span></h2><button class="column-add" :aria-label="`在${status.label}列新建任务`" @click="emit('create', status.value)">＋</button></header>
       <div class="column-tasks"><div v-for="task in tasks.filter(t => t.status === status.value)" :key="task.id" draggable="true" class="draggable-task" :class="{ dragging: dragging === task.id }" @dragstart="start($event, task)" @dragend="finish"><TaskCard :task="task" @edit="emit('edit', $event)" @delete="emit('delete', $event)" @status="(id, value) => emit('status', id, value)" /></div></div>
-      <div v-if="!tasks.some(t => t.status === status.value)" class="column-empty"><span class="column-empty-icon"><AppIcon :name="status.value === 'done' ? 'check' : status.value === 'doing' ? 'clock' : 'list'" /></span><p>{{ status.value === 'done' ? '每个完成，都值得记录' : status.value === 'doing' ? '给想法一个开始' : '为下一步留一点空间' }}</p><span>拖动任务到这里，或点击 ＋ 添加</span></div>
+      <div v-if="!tasks.some(t => t.status === status.value)" class="column-empty"><span class="column-empty-icon"><AppIcon :name="status.value === 'done' ? 'check' : status.value === 'doing' ? 'clock' : 'list'" /></span><p>{{ filtered ? '当前筛选下没有匹配任务' : status.value === 'done' ? '每个完成，都值得记录' : status.value === 'doing' ? '给想法一个开始' : '为下一步留一点空间' }}</p><span>{{ filtered ? '可调整条件，或清除筛选显示全部' : '拖动任务到这里，或点击 ＋ 添加' }}</span></div>
     </section>
   </div>
 </template>

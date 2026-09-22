@@ -5,6 +5,7 @@ import TaskBoard from './components/TaskBoard.vue'
 import ThemePicker from './components/ThemePicker.vue'
 import AppIcon from './components/AppIcon.vue'
 import { statuses, priorities, validateTask } from './lib/tasks.js'
+import { filterTasks } from './lib/search.js'
 import { loadTasks, saveTasks } from './lib/storage.js'
 import { accentColors, saveAccent, saveTheme } from './lib/theme.js'
 
@@ -43,11 +44,19 @@ function toggleTheme() {
   document.documentElement.dataset.theme = theme.value
   notice.value = saveTheme(storage, theme.value) || `已切换为${theme.value === 'dark' ? '深色' : '浅色'}模式，并记住选择`
 }
-const visibleTasks = computed(() => tasks.value.filter(task =>
-  (statusFilter.value === 'all' || task.status === statusFilter.value) &&
-  (priorityFilter.value === 'all' || task.priority === priorityFilter.value) &&
-  `${task.title} ${task.description}`.toLocaleLowerCase().includes(query.value.trim().toLocaleLowerCase())
-))
+const visibleTasks = computed(() => filterTasks(tasks.value, query.value, statusFilter.value, priorityFilter.value))
+const hasFilters = computed(() => Boolean(query.value || statusFilter.value !== 'all' || priorityFilter.value !== 'all'))
+const filterSummary = computed(() => [
+  query.value.trim() ? `关键词：${query.value.trim()}` : '',
+  statusFilter.value !== 'all' ? `状态：${statuses.find(s => s.value === statusFilter.value)?.label}` : '',
+  priorityFilter.value !== 'all' ? `优先级：${priorities.find(p => p.value === priorityFilter.value)?.label}` : '',
+].filter(Boolean).join('；'))
+function resetFilters() {
+  query.value = ''
+  statusFilter.value = 'all'
+  priorityFilter.value = 'all'
+  notice.value = '已清除筛选，显示全部任务'
+}
 const completed = computed(() => tasks.value.filter(task => task.status === 'done').length)
 const progress = computed(() => tasks.value.length ? Math.round(completed.value / tasks.value.length * 100) : 0)
 
@@ -107,9 +116,13 @@ function removeTask() {
           <div><span><i class="dot done"></i>已完成</span><strong>{{ completed }}<small>继续保持</small></strong></div>
           <div><span>完成进度 <b>{{ progress }}%</b></span><div class="progress"><div :style="{ width: `${progress}%` }"></div></div><small>每一次完成，都是一次前进</small></div>
         </section>
-        <div class="toolbar"><h2>任务清单 <span class="count">{{ visibleTasks.length }}</span></h2><div class="filters"><input v-model="query" aria-label="搜索任务" placeholder="搜索标题或描述…" type="search" /><select v-model="statusFilter" aria-label="筛选状态"><option value="all">全部状态</option><option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option></select><select v-model="priorityFilter" aria-label="筛选优先级"><option value="all">全部优先级</option><option v-for="p in priorities" :key="p.value" :value="p.value">{{ p.label }}优先级</option></select></div></div>
+        <div class="toolbar"><h2>任务清单 <span class="count">{{ visibleTasks.length }}</span></h2><div class="filters"><input v-model="query" aria-label="搜索任务" placeholder="搜索标题、描述、状态或优先级…" type="search" /><select v-model="statusFilter" aria-label="筛选状态"><option value="all">全部状态</option><option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option></select><select v-model="priorityFilter" aria-label="筛选优先级"><option value="all">全部优先级</option><option v-for="p in priorities" :key="p.value" :value="p.value">{{ p.label }}优先级</option></select></div></div>
+        <div v-if="hasFilters" class="search-feedback">
+          <div role="status" aria-live="polite"><strong>{{ visibleTasks.length ? `显示 ${visibleTasks.length} / ${tasks.length} 项任务` : '没有找到匹配的任务' }}</strong><p>{{ filterSummary }}</p><p>搜索与下拉筛选同时生效，未匹配的任务只是暂时隐藏。</p></div>
+          <button class="secondary" @click="resetFilters">清除筛选，显示全部</button>
+        </div>
         <div class="view-bar"><div class="view-switch" role="group" aria-label="切换视图"><button :aria-pressed="view === 'board'" :class="{ active: view === 'board' }" @click="view = 'board'">▦ 看板视图</button><button :aria-pressed="view === 'list'" :class="{ active: view === 'list' }" @click="view = 'list'">☷ 列表视图</button></div><span class="muted">{{ view === 'board' ? '拖动卡片即可更改状态' : '清晰记录每一项行动' }}</span></div>
-        <TaskBoard v-if="view === 'board'" :tasks="visibleTasks" @edit="openEditor" @delete="askDelete" @status="changeStatus" @create="createInColumn" />
+        <TaskBoard v-if="view === 'board'" :tasks="visibleTasks" :filtered="hasFilters" @edit="openEditor" @delete="askDelete" @status="changeStatus" @create="createInColumn" />
         <div v-else class="task-list"><TaskCard v-for="task in visibleTasks" :key="task.id" :task="task" @edit="openEditor" @delete="askDelete" @status="changeStatus" /></div>
         <section v-if="!visibleTasks.length && view === 'list'" class="empty"><div class="empty-icon">✓</div><h2>{{ tasks.length ? '没有找到匹配的任务' : '给今天安排第一件事' }}</h2><p class="muted mt-3">{{ tasks.length ? '试试其他关键词，或调整筛选条件。' : '添加一个任务，让想法从这里开始落地。' }}</p><button v-if="!tasks.length" class="primary mt-6" @click="openEditor()">＋ 创建第一个任务</button></section>
         <footer class="page-footer"><span>{{ storageError ? '本地保存不可用' : '✓ 任务自动保存在当前浏览器' }}</span><span role="status" aria-live="polite">{{ notice }}</span></footer>
