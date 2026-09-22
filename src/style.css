@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+:root { font-family: Inter, "Microsoft YaHei", system-ui, sans-serif; color: #202638; background: #f6f7fb; font-synthesis: none; }
+body { margin: 0; min-width: 320px; }
+h1 { font-size: 34px; font-weight: 750; letter-spacing: -1px; }
+h1 span { font-weight: 400; }
+h2 { font-size: 18px; font-weight: 650; }
+.eyebrow { color: #7062dc; font-size: 11px; font-weight: 750; letter-spacing: 2px; margin-bottom: 12px; }
+.muted { color: #7b8295; font-size: 14px; }
+.empty { border: 1px dashed #d5d9e6; border-radius: 16px; padding: 55px 24px; text-align: center; background: white; }
