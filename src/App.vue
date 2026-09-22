@@ -1,9 +1,17 @@
 <script setup>
-import { computed, nextTick, reactive, ref } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import TaskCard from './components/TaskCard.vue'
 import { statuses, priorities, validateTask } from './lib/tasks.js'
+import { loadTasks, saveTasks } from './lib/storage.js'
 
-const tasks = ref([])
+let storage
+try { storage = window.localStorage } catch { /* Storage can be disabled by the browser. */ }
+const initial = loadTasks(storage)
+const tasks = ref(initial.tasks)
+const storageError = ref(initial.error)
+watch(tasks, value => {
+  if (initial.writable) storageError.value = saveTasks(storage, value)
+}, { deep: true, flush: 'sync' })
 const query = ref('')
 const statusFilter = ref('all')
 const priorityFilter = ref('all')
@@ -69,6 +77,7 @@ function removeTask() {
     <main class="main-content">
       <header class="topbar"><span>工作空间 <span class="breadcrumb"> / 我的任务</span></span><span class="muted">让每一步更有序</span></header>
       <div class="page-content">
+        <p v-if="storageError" class="storage-error" role="alert">{{ storageError }}</p>
         <div class="page-heading"><div><p class="eyebrow">MAKE ROOM FOR WHAT MATTERS</p><h1>我的任务<span class="heading-dot">.</span></h1><p class="muted mt-2">整理思路，专注行动。今天也向目标靠近一点。</p></div><button class="primary" @click="openEditor()">＋ 新建任务</button></div>
         <section class="stats" aria-label="任务统计">
           <div><span>全部任务</span><strong>{{ tasks.length }}<small>项任务</small></strong></div>
@@ -79,7 +88,7 @@ function removeTask() {
         <div class="toolbar"><h2>任务清单 <span class="count">{{ visibleTasks.length }}</span></h2><div class="filters"><input v-model="query" aria-label="搜索任务" placeholder="搜索标题或描述…" type="search" /><select v-model="statusFilter" aria-label="筛选状态"><option value="all">全部状态</option><option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option></select><select v-model="priorityFilter" aria-label="筛选优先级"><option value="all">全部优先级</option><option v-for="p in priorities" :key="p.value" :value="p.value">{{ p.label }}优先级</option></select></div></div>
         <div class="task-list"><TaskCard v-for="task in visibleTasks" :key="task.id" :task="task" @edit="openEditor" @delete="askDelete" @status="changeStatus" /></div>
         <section v-if="!visibleTasks.length" class="empty"><div class="empty-icon">✓</div><h2>{{ tasks.length ? '没有找到匹配的任务' : '给今天安排第一件事' }}</h2><p class="muted mt-3">{{ tasks.length ? '试试其他关键词，或调整筛选条件。' : '添加一个任务，让想法从这里开始落地。' }}</p><button v-if="!tasks.length" class="primary mt-6" @click="openEditor()">＋ 创建第一个任务</button></section>
-        <footer class="page-footer"><span>一步一步，完成重要的事。</span><span role="status" aria-live="polite">{{ notice }}</span></footer>
+        <footer class="page-footer"><span>{{ storageError ? '本地保存不可用' : '✓ 任务自动保存在当前浏览器' }}</span><span role="status" aria-live="polite">{{ notice }}</span></footer>
       </div>
     </main>
     <dialog ref="editor" aria-labelledby="editor-title" class="modal">

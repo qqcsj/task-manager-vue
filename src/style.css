@@ -74,6 +74,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
 .empty { background: var(--surface); border-color: var(--border); }.empty-icon { width: 50px; height: 50px; display: grid; place-items: center; margin: 0 auto 20px; border-radius: 14px; color: var(--accent); background: var(--soft); font-size: 24px; }
 .page-footer { display: flex; justify-content: space-between; gap: 15px; font-size: 11px; color: var(--muted); margin-top: 30px; }
 .muted { color: var(--muted); }
+.storage-error { padding: 12px 16px; background: #fff2de; color: #8c5811; border: 1px solid #edd4a3; border-radius: 8px; font-size: 13px; margin-bottom: 20px; }
 .modal { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 18px; padding: 28px; width: min(500px, calc(100vw - 32px)); margin: auto; max-height: calc(100dvh - 40px); overflow-y: auto; box-shadow: 0 24px 90px #17142e30; }
 .modal::backdrop { background: #15132666; backdrop-filter: blur(3px); }
 .modal-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }.icon-button { font-size: 26px; color: var(--muted); padding: 0 6px; }
