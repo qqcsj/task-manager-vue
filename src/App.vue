@@ -4,6 +4,8 @@ import TaskCard from './components/TaskCard.vue'
 import TaskBoard from './components/TaskBoard.vue'
 import ThemePicker from './components/ThemePicker.vue'
 import AppIcon from './components/AppIcon.vue'
+import ProgressEncouragement from './components/ProgressEncouragement.vue'
+import { greetings, createPhrasePicker } from './lib/encouragement.js'
 import { statuses, priorities, validateTask } from './lib/tasks.js'
 import { filterTasks } from './lib/search.js'
 import { loadTasks, saveTasks } from './lib/storage.js'
@@ -11,6 +13,8 @@ import { accentColors, saveAccent, saveTheme } from './lib/theme.js'
 
 let storage
 try { storage = window.localStorage } catch { /* Storage can be disabled by the browser. */ }
+const pickPhrase = createPhrasePicker(storage)
+const greeting = greetings[pickPhrase('headline', greetings.length)]
 const initial = loadTasks(storage)
 const tasks = ref(initial.tasks)
 const storageError = ref(initial.error)
@@ -109,7 +113,7 @@ function removeTask() {
       <header class="topbar"><span>工作空间 <span class="breadcrumb"> / 我的任务</span></span><span class="today-label"><AppIcon name="clock" />{{ todayLabel }}</span></header>
       <div class="page-content">
         <p v-if="storageError" class="storage-error" role="alert">{{ storageError }}</p>
-        <div class="page-heading"><div><p class="eyebrow">一点专注 · 一点进步</p><h1>让每一件事，<br class="mobile-break" />都有条不紊<span class="heading-dot">。</span></h1><p class="muted mt-3">整理思路，专注行动。今天也向目标靠近一点。</p><button class="primary hero-create" @click="openEditor()"><AppIcon name="plus" />新建任务<AppIcon name="arrow" /></button></div><div class="hero-progress"><div class="progress-ring" :style="{ '--completion': `${progress}%` }"><div><strong>{{ progress }}<small>%</small></strong><span>任务完成率</span></div></div><p>{{ tasks.length ? `已完成 ${completed} 项，还有 ${tasks.length - completed} 项待推进` : '从你的第一个小目标开始' }}</p></div></div>
+        <div class="page-heading"><div><p class="eyebrow">一点专注 · 一点进步</p><h1>{{ greeting[0] }}<span class="heading-dot">。</span></h1><p class="muted mt-3">{{ greeting[1] }}</p><button class="primary hero-create" @click="openEditor()"><AppIcon name="plus" />新建任务<AppIcon name="arrow" /></button></div><ProgressEncouragement :total="tasks.length" :completed="completed" :progress="progress" :pick="pickPhrase" /></div>
         <section class="stats" aria-label="任务统计">
           <div><span>全部任务</span><strong>{{ tasks.length }}<small>项任务</small></strong></div>
           <div><span><i class="dot doing"></i>进行中</span><strong>{{ tasks.filter(t => t.status === 'doing').length }}<small>正在推进</small></strong></div>
