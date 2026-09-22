@@ -4,6 +4,7 @@ import TaskCard from './components/TaskCard.vue'
 import TaskBoard from './components/TaskBoard.vue'
 import { statuses, priorities, validateTask } from './lib/tasks.js'
 import { loadTasks, saveTasks } from './lib/storage.js'
+import { saveTheme } from './lib/theme.js'
 
 let storage
 try { storage = window.localStorage } catch { /* Storage can be disabled by the browser. */ }
@@ -25,6 +26,12 @@ const editingId = ref(null)
 const form = reactive({ title: '', description: '', status: 'todo', priority: 'medium' })
 const error = ref('')
 const notice = ref('')
+const theme = ref(document.documentElement.dataset.theme || 'light')
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  document.documentElement.dataset.theme = theme.value
+  notice.value = saveTheme(storage, theme.value) || `已切换为${theme.value === 'dark' ? '深色' : '浅色'}模式，并记住选择`
+}
 const visibleTasks = computed(() => tasks.value.filter(task =>
   (statusFilter.value === 'all' || task.status === statusFilter.value) &&
   (priorityFilter.value === 'all' || task.priority === priorityFilter.value) &&
@@ -75,6 +82,7 @@ function removeTask() {
       <div class="workspace-label">个人工作空间</div>
       <div class="nav-active">▦ <span>我的任务</span><span class="nav-count">{{ tasks.length }}</span></div>
       <div class="sidebar-note"><span class="note-icon">✦</span><h2>专注当下，逐一完成</h2><p>把大目标拆成小任务。<br />每一步，都算数。</p></div>
+      <button class="theme-toggle" :aria-pressed="theme === 'dark'" @click="toggleTheme">{{ theme === 'dark' ? '☀ 浅色模式' : '☾ 深色模式' }}</button>
       <div class="profile"><span class="avatar">我</span><div>我的工作空间<small>个人任务管理</small></div></div>
     </aside>
     <main class="main-content">
