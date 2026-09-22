@@ -1,8 +1,96 @@
+<script setup>
+import { computed, nextTick, reactive, ref } from 'vue'
+import TaskCard from './components/TaskCard.vue'
+import { statuses, priorities, validateTask } from './lib/tasks.js'
+
+const tasks = ref([])
+const query = ref('')
+const statusFilter = ref('all')
+const priorityFilter = ref('all')
+const editor = ref(null)
+const titleInput = ref(null)
+const deleteDialog = ref(null)
+const deleting = ref(null)
+const editingId = ref(null)
+const form = reactive({ title: '', description: '', status: 'todo', priority: 'medium' })
+const error = ref('')
+const notice = ref('')
+const visibleTasks = computed(() => tasks.value.filter(task =>
+  (statusFilter.value === 'all' || task.status === statusFilter.value) &&
+  (priorityFilter.value === 'all' || task.priority === priorityFilter.value) &&
+  `${task.title} ${task.description}`.toLocaleLowerCase().includes(query.value.trim().toLocaleLowerCase())
+))
+const completed = computed(() => tasks.value.filter(task => task.status === 'done').length)
+const progress = computed(() => tasks.value.length ? Math.round(completed.value / tasks.value.length * 100) : 0)
+
+async function openEditor(task = null) {
+  editingId.value = task?.id ?? null
+  Object.assign(form, { title: task?.title ?? '', description: task?.description ?? '', status: task?.status ?? 'todo', priority: task?.priority ?? 'medium' })
+  error.value = ''
+  editor.value.showModal()
+  await nextTick()
+  titleInput.value.focus()
+}
+function saveTask() {
+  error.value = validateTask(form)
+  if (error.value) return
+  const fields = { ...form, title: form.title.trim(), description: form.description.trim(), updatedAt: new Date().toISOString() }
+  if (editingId.value) {
+    tasks.value = tasks.value.map(task => task.id === editingId.value ? { ...task, ...fields } : task)
+    notice.value = '任务已更新'
+  } else {
+    tasks.value.unshift({ ...fields, id: crypto.randomUUID(), createdAt: fields.updatedAt })
+    notice.value = '任务已创建'
+  }
+  editor.value.close()
+}
+function changeStatus(id, status) {
+  if (!statuses.some(item => item.value === status)) return
+  tasks.value = tasks.value.map(task => task.id === id ? { ...task, status, updatedAt: new Date().toISOString() } : task)
+  notice.value = '任务状态已更新'
+}
+function askDelete(task) { deleting.value = task; deleteDialog.value.showModal() }
+function removeTask() {
+  tasks.value = tasks.value.filter(task => task.id !== deleting.value.id)
+  deleteDialog.value.close()
+  notice.value = '任务已删除'
+}
+</script>
+
 <template>
-  <main class="mx-auto max-w-6xl px-6 py-16">
-    <p class="eyebrow">YOUR PERSONAL WORKSPACE</p>
-    <h1>有序 <span>· 任务管理</span></h1>
-    <p class="muted mt-4">把想法变成行动，让每一件事有条不紊。</p>
-    <section class="empty mt-10"><h2>你的任务空间已就绪</h2><p class="muted mt-3">从一件小事开始，专注完成每一步。</p></section>
-  </main>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="./"><span class="brand-icon">✓</span> 有序 <span class="brand-en">TASKS</span></a>
+      <div class="workspace-label">个人工作空间</div>
+      <div class="nav-active">▦ <span>我的任务</span><span class="nav-count">{{ tasks.length }}</span></div>
+      <div class="sidebar-note"><span class="note-icon">✦</span><h2>专注当下，逐一完成</h2><p>把大目标拆成小任务。<br />每一步，都算数。</p></div>
+      <div class="profile"><span class="avatar">我</span><div>我的工作空间<small>个人任务管理</small></div></div>
+    </aside>
+    <main class="main-content">
+      <header class="topbar"><span>工作空间 <span class="breadcrumb"> / 我的任务</span></span><span class="muted">让每一步更有序</span></header>
+      <div class="page-content">
+        <div class="page-heading"><div><p class="eyebrow">MAKE ROOM FOR WHAT MATTERS</p><h1>我的任务<span class="heading-dot">.</span></h1><p class="muted mt-2">整理思路，专注行动。今天也向目标靠近一点。</p></div><button class="primary" @click="openEditor()">＋ 新建任务</button></div>
+        <section class="stats" aria-label="任务统计">
+          <div><span>全部任务</span><strong>{{ tasks.length }}<small>项任务</small></strong></div>
+          <div><span><i class="dot doing"></i>进行中</span><strong>{{ tasks.filter(t => t.status === 'doing').length }}<small>正在推进</small></strong></div>
+          <div><span><i class="dot done"></i>已完成</span><strong>{{ completed }}<small>继续保持</small></strong></div>
+          <div><span>完成进度 <b>{{ progress }}%</b></span><div class="progress"><div :style="{ width: `${progress}%` }"></div></div><small>每一次完成，都是一次前进</small></div>
+        </section>
+        <div class="toolbar"><h2>任务清单 <span class="count">{{ visibleTasks.length }}</span></h2><div class="filters"><input v-model="query" aria-label="搜索任务" placeholder="搜索标题或描述…" type="search" /><select v-model="statusFilter" aria-label="筛选状态"><option value="all">全部状态</option><option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option></select><select v-model="priorityFilter" aria-label="筛选优先级"><option value="all">全部优先级</option><option v-for="p in priorities" :key="p.value" :value="p.value">{{ p.label }}优先级</option></select></div></div>
+        <div class="task-list"><TaskCard v-for="task in visibleTasks" :key="task.id" :task="task" @edit="openEditor" @delete="askDelete" @status="changeStatus" /></div>
+        <section v-if="!visibleTasks.length" class="empty"><div class="empty-icon">✓</div><h2>{{ tasks.length ? '没有找到匹配的任务' : '给今天安排第一件事' }}</h2><p class="muted mt-3">{{ tasks.length ? '试试其他关键词，或调整筛选条件。' : '添加一个任务，让想法从这里开始落地。' }}</p><button v-if="!tasks.length" class="primary mt-6" @click="openEditor()">＋ 创建第一个任务</button></section>
+        <footer class="page-footer"><span>一步一步，完成重要的事。</span><span role="status" aria-live="polite">{{ notice }}</span></footer>
+      </div>
+    </main>
+    <dialog ref="editor" aria-labelledby="editor-title" class="modal">
+      <form @submit.prevent="saveTask" novalidate><div class="modal-heading"><h2 id="editor-title">{{ editingId ? '编辑任务' : '新建任务' }}</h2><button type="button" class="icon-button" aria-label="关闭表单" @click="editor.close()">×</button></div>
+        <p class="muted mb-6">明确下一步，让行动更简单。</p>
+        <label for="task-title">任务标题 <span class="required">*</span></label><input id="task-title" ref="titleInput" v-model="form.title" maxlength="120" required placeholder="你想完成什么？" :aria-invalid="Boolean(error)" aria-describedby="form-error" />
+        <label for="task-description">任务描述 <span class="muted">（选填）</span></label><textarea id="task-description" v-model="form.description" rows="4" maxlength="5000" placeholder="补充细节、想法或执行步骤…"></textarea>
+        <div class="form-grid"><div><label for="task-status">状态</label><select id="task-status" v-model="form.status"><option v-for="s in statuses" :key="s.value" :value="s.value">{{ s.label }}</option></select></div><div><label for="task-priority">优先级</label><select id="task-priority" v-model="form.priority"><option v-for="p in priorities" :key="p.value" :value="p.value">{{ p.label }}</option></select></div></div>
+        <p id="form-error" class="error" role="alert">{{ error }}</p><div class="modal-actions"><button type="button" class="secondary" @click="editor.close()">取消</button><button type="submit" class="primary">{{ editingId ? '保存修改' : '创建任务' }}</button></div>
+      </form>
+    </dialog>
+    <dialog ref="deleteDialog" class="modal delete-modal" aria-labelledby="delete-title"><h2 id="delete-title">删除这个任务？</h2><p class="delete-text">“{{ deleting?.title }}” 将被删除，此操作无法撤销。</p><div class="modal-actions"><button class="secondary" @click="deleteDialog.close()">取消</button><button class="danger" @click="removeTask">确认删除</button></div></dialog>
+  </div>
 </template>
