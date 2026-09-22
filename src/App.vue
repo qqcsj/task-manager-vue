@@ -2,9 +2,10 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import TaskCard from './components/TaskCard.vue'
 import TaskBoard from './components/TaskBoard.vue'
+import ThemePicker from './components/ThemePicker.vue'
 import { statuses, priorities, validateTask } from './lib/tasks.js'
 import { loadTasks, saveTasks } from './lib/storage.js'
-import { saveTheme } from './lib/theme.js'
+import { accentColors, saveAccent, saveTheme } from './lib/theme.js'
 
 let storage
 try { storage = window.localStorage } catch { /* Storage can be disabled by the browser. */ }
@@ -27,6 +28,14 @@ const form = reactive({ title: '', description: '', status: 'todo', priority: 'm
 const error = ref('')
 const notice = ref('')
 const theme = ref(document.documentElement.dataset.theme || 'light')
+const accent = ref(document.documentElement.dataset.accent || 'purple')
+function changeAccent(value) {
+  const color = accentColors.find(color => color.value === value)
+  if (!color) return
+  accent.value = value
+  document.documentElement.dataset.accent = value
+  notice.value = saveAccent(storage, value) || `已选择${color.label}主题，并记住选择`
+}
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
   document.documentElement.dataset.theme = theme.value
@@ -82,7 +91,7 @@ function removeTask() {
       <div class="workspace-label">个人工作空间</div>
       <div class="nav-active">▦ <span>我的任务</span><span class="nav-count">{{ tasks.length }}</span></div>
       <div class="sidebar-note"><span class="note-icon">✦</span><h2>专注当下，逐一完成</h2><p>把大目标拆成小任务。<br />每一步，都算数。</p></div>
-      <button class="theme-toggle" :aria-pressed="theme === 'dark'" @click="toggleTheme">{{ theme === 'dark' ? '☀ 浅色模式' : '☾ 深色模式' }}</button>
+      <ThemePicker :theme="theme" :accent="accent" @toggle="toggleTheme" @accent="changeAccent" />
       <div class="profile"><span class="avatar">我</span><div>我的工作空间<small>个人任务管理</small></div></div>
     </aside>
     <main class="main-content">
