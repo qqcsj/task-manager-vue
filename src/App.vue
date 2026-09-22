@@ -3,6 +3,7 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 import TaskCard from './components/TaskCard.vue'
 import TaskBoard from './components/TaskBoard.vue'
 import ThemePicker from './components/ThemePicker.vue'
+import AppIcon from './components/AppIcon.vue'
 import { statuses, priorities, validateTask } from './lib/tasks.js'
 import { loadTasks, saveTasks } from './lib/storage.js'
 import { accentColors, saveAccent, saveTheme } from './lib/theme.js'
@@ -27,6 +28,7 @@ const editingId = ref(null)
 const form = reactive({ title: '', description: '', status: 'todo', priority: 'medium' })
 const error = ref('')
 const notice = ref('')
+const todayLabel = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' }).format(new Date())
 const theme = ref(document.documentElement.dataset.theme || 'light')
 const accent = ref(document.documentElement.dataset.accent || 'purple')
 function changeAccent(value) {
@@ -87,18 +89,18 @@ function removeTask() {
 <template>
   <div class="app-shell">
     <aside class="sidebar">
-      <a class="brand" href="./"><span class="brand-icon">✓</span> 有序 <span class="brand-en">TASKS</span></a>
+      <a class="brand" href="./"><span class="brand-icon"><AppIcon name="check" /></span> 有序 <span class="brand-en">TASKS</span></a>
       <div class="workspace-label">个人工作空间</div>
-      <div class="nav-active">▦ <span>我的任务</span><span class="nav-count">{{ tasks.length }}</span></div>
+      <div class="nav-active"><AppIcon name="board" /><span>我的任务</span><span class="nav-count">{{ tasks.length }}</span></div>
       <div class="sidebar-note"><span class="note-icon">✦</span><h2>专注当下，逐一完成</h2><p>把大目标拆成小任务。<br />每一步，都算数。</p></div>
       <ThemePicker :theme="theme" :accent="accent" @toggle="toggleTheme" @accent="changeAccent" />
       <div class="profile"><span class="avatar">我</span><div>我的工作空间<small>个人任务管理</small></div></div>
     </aside>
     <main class="main-content">
-      <header class="topbar"><span>工作空间 <span class="breadcrumb"> / 我的任务</span></span><span class="muted">让每一步更有序</span></header>
+      <header class="topbar"><span>工作空间 <span class="breadcrumb"> / 我的任务</span></span><span class="today-label"><AppIcon name="clock" />{{ todayLabel }}</span></header>
       <div class="page-content">
         <p v-if="storageError" class="storage-error" role="alert">{{ storageError }}</p>
-        <div class="page-heading"><div><p class="eyebrow">MAKE ROOM FOR WHAT MATTERS</p><h1>我的任务<span class="heading-dot">.</span></h1><p class="muted mt-2">整理思路，专注行动。今天也向目标靠近一点。</p></div><button class="primary" @click="openEditor()">＋ 新建任务</button></div>
+        <div class="page-heading"><div><p class="eyebrow">一点专注 · 一点进步</p><h1>让每一件事，<br class="mobile-break" />都有条不紊<span class="heading-dot">。</span></h1><p class="muted mt-3">整理思路，专注行动。今天也向目标靠近一点。</p><button class="primary hero-create" @click="openEditor()"><AppIcon name="plus" />新建任务<AppIcon name="arrow" /></button></div><div class="hero-progress"><div class="progress-ring" :style="{ '--completion': `${progress}%` }"><div><strong>{{ progress }}<small>%</small></strong><span>任务完成率</span></div></div><p>{{ tasks.length ? `已完成 ${completed} 项，还有 ${tasks.length - completed} 项待推进` : '从你的第一个小目标开始' }}</p></div></div>
         <section class="stats" aria-label="任务统计">
           <div><span>全部任务</span><strong>{{ tasks.length }}<small>项任务</small></strong></div>
           <div><span><i class="dot doing"></i>进行中</span><strong>{{ tasks.filter(t => t.status === 'doing').length }}<small>正在推进</small></strong></div>
